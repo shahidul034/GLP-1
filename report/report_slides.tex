@@ -1,0 +1,727 @@
+\documentclass[aspectratio=169]{beamer}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{graphicx}
+
+\title{Synthetic Clinical Note Generation for GLP-1 RA Discontinuation Reason Classification}
+\author{Adiba, Shahidul \\ BioNLP Research Group}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}
+    \titlepage
+\end{frame}
+
+\begin{frame}{Presentation Overview}
+    \tableofcontents
+\end{frame}
+
+\section{Motivation and Scope}
+
+\begin{frame}{Problem and Motivation}
+    \begin{itemize}
+        \item GLP-1 receptor agonists are widely used for diabetes and weight management, but discontinuation is common and clinically important.
+        \item Reasons for discontinuation are often buried in free-text clinical notes rather than structured fields.
+        \item Supervised NLP models need large, high-quality labeled datasets, but annotated clinical notes are expensive to produce.
+        \item This project uses synthetic note generation to build training data for discontinuation reason classification.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Study Objective}
+    \begin{itemize}
+        \item Build a publishable end-to-end pipeline for synthetic GLP-1 discontinuation note generation, validation, and benchmarking.
+        \item Create a diverse synthetic dataset in VA-style EHR format.
+        \item Validate quality with embeddings, LLM judges, and human review.
+        \item Benchmark the dataset on downstream classification with strong model baselines.
+        \item Report rigorous dataset statistics, ablations, and limitations suitable for conference or journal submission.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Current Taxonomy and Expansion Plan}
+    \textbf{Current four-category setup}
+    \begin{enumerate}
+        \item \textbf{Adverse Effects / Tolerability}
+        \item \textbf{Access / Cost / System Barriers}
+        \item \textbf{Patient Preference / Beliefs}
+        \item \textbf{Planned / Goal-Based Discontinuation}
+    \end{enumerate}
+
+    \vspace{0.5em}
+    \textbf{Additional categories available for future expansion}
+    \begin{itemize}
+        \item Clinical Decision / Medical Appropriateness
+        \item Efficacy / Expectation Mismatch
+        \item Other / Unknown
+    \end{itemize}
+
+    \begin{block}{Note}
+        The current results use the four broad categories above; the extra seed categories support future taxonomy expansion.
+    \end{block}
+\end{frame}
+
+\begin{frame}{Research Questions and Planned Contributions}
+    \small
+    \textbf{Research questions}
+    \begin{itemize}
+        \item Can synthetic GLP-1 discontinuation notes achieve strong realism, diversity, and label fidelity?
+        \item How well do LLM-based judgments align with expert human review?
+        \item Does the curated synthetic dataset improve downstream classification in zero-shot, few-shot, and fine-tuned settings?
+        \item Which curation steps matter most for downstream performance?
+    \end{itemize}
+
+    \textbf{Expected contributions}
+    \begin{itemize}
+        \item A new clinically motivated synthetic dataset and benchmark
+        \item A validation pipeline combining embeddings, LLM judges, and human judges
+        \item A multi-model benchmark for GLP-1 discontinuation reason classification
+        \item An empirical study of when synthetic data helps and where it fails
+    \end{itemize}
+\end{frame}
+
+\section{Methodology and Study Design}
+
+\begin{frame}{Synthetic Data Pipeline}
+    \begin{enumerate}
+        \item \textbf{Generation:} Few-shot prompting of LLMs to create VA-style clinical notes
+        \item \textbf{Diversity control:} Qwen3-Embedding-8B deduplication with cosine similarity thresholding
+        \item \textbf{Automated validation:} LLM-as-a-Judge scoring on five quality dimensions
+        \item \textbf{Human validation:} Expert review on a sampled subset for quality and label correctness
+        \item \textbf{Curation:} Threshold-based filtering plus creation of train/dev/test partitions
+    \end{enumerate}
+
+    \vspace{0.5em}
+    \begin{block}{Generation setup}
+        Temperature 0.9, top-p 0.95, max output 4,192 tokens, max model length 8,192, seed 42.
+    \end{block}
+\end{frame}
+
+\begin{frame}{Evaluation Plan}
+    \small
+    \begin{itemize}
+        \item Generate and curate the synthetic dataset
+        \item Compute dataset statistics: class balance, note length, lexical diversity, embedding diversity, and judge score distributions
+        \item Reserve \textbf{200 notes} as a held-out test set and keep them untouched during development
+        \item Measure agreement between LLM-as-a-Judge and human-as-a-Judge review
+        \item Use ablations to test the value of diversity filtering, LLM filtering, and human filtering
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Benchmark Models and Settings}
+    \small
+    \textbf{Planned model families}
+    \begin{itemize}
+        \item Qwen3-4B
+        \item Qwen3-8B
+        \item Qwen3.5-9B
+        \item Gemma 4
+        \item Llama 3.1
+        \item Llama 3.2
+        \item Encoder baselines such as BioClinicalBERT or ClinicalBERT
+    \end{itemize}
+
+    \textbf{Planned settings}
+    \begin{itemize}
+        \item Zero-shot
+        \item Few-shot
+        \item Supervised / fine-tuned
+        \item DPO or other preference-based optimization
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Publication-Ready Study Requirements}
+    \small
+    \begin{itemize}
+        \item \textbf{Human evaluation protocol:} reviewer expertise, annotation rubric, sample size, and agreement metrics such as Cohen's kappa or Krippendorff's alpha
+        \item \textbf{Strong baselines:} include encoder baselines such as BioClinicalBERT or ClinicalBERT, not only generative LLMs
+        \item \textbf{Ablation studies:} test the effect of diversity filtering, LLM filtering, human filtering, prompt design, and category granularity
+        \item \textbf{Agreement analysis:} measure alignment between LLM-as-a-Judge and human-as-a-Judge decisions
+        \item \textbf{External validation:} compare against real or expert-authored notes when possible
+        \item \textbf{Release standards:} dataset card, reproducibility details, privacy/ethics checks, bias analysis, and strict test-set discipline
+    \end{itemize}
+\end{frame}
+
+\section{Current Results}
+
+\begin{frame}{Generation Runs}
+    \small
+    \begin{table}
+        \centering
+        \begin{tabular}{llll}
+            \toprule
+            \textbf{Model} & \textbf{Run} & \textbf{Notes/Category} & \textbf{Total} \\
+            \midrule
+            Gemma-4-31B-it & v1 exploratory & 100 & 400 \\
+            Qwen3.5-27B & v1 exploratory & 100 & 400 \\
+            Qwen3.6-27B & v1 exploratory & 81--100 & 280 \\
+            GLM-4.7-Flash & v1 exploratory & 100 & 400 \\
+            \midrule
+            \multicolumn{3}{l}{\textbf{Subtotal exploratory}} & \textbf{1,480} \\
+            \midrule
+            Gemma-4-31B-it & v2 scale-up & 1,000 & 4,000 \\
+            \midrule
+            \textbf{Grand Total} & & & \textbf{5,480} \\
+            \bottomrule
+        \end{tabular}
+    \end{table}
+
+    \begin{itemize}
+        \item The exploratory phase compared four generation models.
+        \item Gemma-4-31B-it was selected for scale-up after the strongest quality results.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Gemma v2 Scale-Up}
+    \small
+    \begin{table}
+        \centering
+        \begin{tabular}{lrr}
+            \toprule
+            \textbf{Category} & \textbf{Notes} & \textbf{Elapsed Time (s)} \\
+            \midrule
+            Adverse Effects / Tolerability & 1,000 & 1,321.5 \\
+            Access / Cost / System Barriers & 1,000 & 1,217.0 \\
+            Patient Preference / Beliefs & 1,000 & 1,363.9 \\
+            Planned / Goal-Based Discontinuation & 1,000 & 1,002.6 \\
+            \midrule
+            \textbf{Total} & \textbf{4,000} & \textbf{4,905.0} \\
+            \bottomrule
+        \end{tabular}
+    \end{table}
+
+    \begin{itemize}
+        \item Used the same prompting and inference settings as the exploratory Gemma run.
+        \item Total generation time was about 82 minutes.
+        \item Combined Gemma pool after v1 + v2: 4,400 notes.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{LLM-as-a-Judge Framework}
+    \begin{itemize}
+        \item Judge model: \textbf{Gemma-4-31B-it}
+        \item Each note was scored from 1 to 5 on:
+        \begin{itemize}
+            \item Clinical realism
+            \item Category alignment
+            \item Clinical coherence
+            \item Note variability
+            \item GLP-1 relevance
+        \end{itemize}
+        \item Each note also received an overall accept/reject decision.
+    \end{itemize}
+
+    \begin{block}{Filtering criteria}
+        Retain only notes with accept decisions, strong per-dimension scores, and average score $\geq 3.0$.
+    \end{block}
+\end{frame}
+
+\begin{frame}{Overall Quality by Model}
+    \scriptsize
+    \begin{table}
+        \centering
+        \begin{tabular}{lccccc}
+            \toprule
+            \textbf{Model} & \textbf{Realism} & \textbf{Alignment} & \textbf{Coherence} & \textbf{Variability} & \textbf{Relevance} \\
+            \midrule
+            Gemma-4-31B-it & 4.98 & 5.00 & 5.00 & 4.89 & 5.00 \\
+            Qwen3.5-27B & 5.00 & 5.00 & 5.00 & 4.40 & 5.00 \\
+            GLM-4.7-Flash & 3.82 & 4.32 & 4.01 & 3.61 & 4.32 \\
+            Qwen3.6-27B & 1.16 & 1.16 & 1.16 & 1.15 & 1.16 \\
+            \bottomrule
+        \end{tabular}
+    \end{table}
+
+    \begin{itemize}
+        \item Gemma delivered the strongest and most consistent quality.
+        \item Qwen3.5 remained strong overall but was weaker on note variability.
+        \item GLM and Qwen3.6 showed substantial quality degradation.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Filtering Outcome}
+    \small
+    \begin{table}
+        \centering
+        \begin{tabular}{lcccc}
+            \toprule
+            \textbf{Model} & \textbf{Total} & \textbf{Accept Rate} & \textbf{Kept} & \textbf{Keep Rate} \\
+            \midrule
+            Gemma-4-31B-it & 400 & 100.0\% & 354 & 88.5\% \\
+            Qwen3.5-27B & 400 & 100.0\% & 159 & 39.8\% \\
+            GLM-4.7-Flash & 400 & 82.5\% & 42 & 10.5\% \\
+            Qwen3.6-27B & 280 & 3.9\% & 10 & 3.6\% \\
+            \midrule
+            \textbf{Total} & \textbf{1,480} & \textbf{---} & \textbf{565} & \textbf{38.2\%} \\
+            \bottomrule
+        \end{tabular}
+    \end{table}
+
+    \begin{block}{Key takeaway}
+        Gemma was the clear winner: 4.97 mean overall score and 88.5\% retention under strict filtering.
+    \end{block}
+\end{frame}
+
+\begin{frame}{Category-Level Findings}
+    \small
+    \begin{table}
+        \centering
+        \begin{tabular}{lcccc}
+            \toprule
+             & \textbf{Gemma} & \textbf{Qwen3.5} & \textbf{GLM} & \textbf{Qwen3.6} \\
+            \midrule
+            Adverse Effects & 100 & 28 & 4 & 0 \\
+            Access / Cost & 100 & 22 & 11 & 0 \\
+            Patient Preference & 100 & 96 & 27 & 1 \\
+            Goal-Based & 54 & 13 & 0 & 9 \\
+            \midrule
+            \textbf{Total} & \textbf{354} & \textbf{159} & \textbf{42} & \textbf{10} \\
+            \bottomrule
+        \end{tabular}
+    \end{table}
+
+    \begin{itemize}
+        \item Patient Preference was especially strong for Qwen3.5 and GLM.
+        \item Planned / Goal-Based discontinuation was the hardest category for multiple models.
+        \item The strongest current training pool comes from Gemma plus selected high-quality notes from other models.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Key Findings So Far}
+    \begin{itemize}
+        \item Gemma-4-31B-it is the strongest generator under the current pipeline.
+        \item The 565 filtered notes provide a strong starting point for classifier training.
+        \item The 4,400-note Gemma pool is the main resource for next-stage curation.
+        \item \textbf{Low note variability} was the most common rejection reason across models.
+        \item \textbf{Clinical realism failures} were prominent for GLM-4.7-Flash and Qwen3.6-27B.
+        \item \textbf{Category misalignment} was severe for Qwen3.6-27B, indicating likely prompt-following or formatting issues.
+        \item Poor performance for Qwen3.6-27B appears more consistent with an implementation problem than a true model ceiling.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Current Limitations}
+    \begin{itemize}
+        \item Synthetic notes may still miss the messiness of real EHR text.
+        \item Evaluation relied on a single judge model.
+        \item Real discontinuation reasons can be multi-factorial and harder to label cleanly than the current taxonomy.
+        \item Human validation, external validation, and downstream benchmarking are still in progress.
+    \end{itemize}
+\end{frame}
+
+\section{Next Steps}
+
+\begin{frame}{Next Steps Toward a Publishable Dataset Paper}
+    \begin{itemize}
+        \item Evaluate the 4,000-note Gemma v2 corpus with the same automated and human validation pipeline.
+        \item Apply diversity filtering, quality filtering, and error analysis to the expanded corpus.
+        \item Construct stable train/dev/test splits, including a fixed 200-note held-out test set.
+        \item Benchmark classifier performance across Qwen3-4B, Qwen3-8B, Qwen3.5-9B, Gemma 4, Llama 3.1, and Llama 3.2.
+        \item Compare zero-shot, few-shot, supervised fine-tuning, and DPO-style preference optimization.
+        \item Report publishable dataset statistics, ablations, and agreement analysis between LLM judges and human reviewers.
+        \item Expand beyond the current four-class setup using additional seed categories: Clinical Decision / Medical Appropriateness, Efficacy / Expectation Mismatch, and Other / Unknown.
+        \item Compare against real-world EHR sources for external validity.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Conclusion}
+    \begin{itemize}
+        \item Total synthetic corpus generated: \textbf{5,480 notes}
+        \item Exploratory corpus retained after filtering: \textbf{565 notes}
+        \item Best generation model: \textbf{Gemma-4-31B-it}
+        \item Gemma scale-up corpus available for next-stage curation: \textbf{4,400 notes}
+    \end{itemize}
+
+    \vspace{0.75em}
+    \begin{block}{Bottom line}
+        The project has a clear presentation path: motivate the task, explain the curation pipeline, show current generation results, and end with the validation and benchmarking plan needed for a strong dataset paper.
+    \end{block}
+\end{frame}
+
+\appendix
+\section{Category Examples}
+
+\begin{frame}[fragile,allowframebreaks]{Example Note: Adverse Effects / Tolerability}
+\tiny
+\textbf{Discontinuation cue:}
+\textcolor{red}{persistent GI side effects unresponsive to mitigation, anhedonia of unclear etiology, and distressing hair loss are driving discontinuation.}
+
+\vspace{0.5em}
+\begin{verbatim}
+OUTPATIENT VISIT NOTE
+Date of Service: 10/14/2024
+Provider: Whitfield, Dana A., MD
+Location: Internal Medicine - Weight Management Clinic
+Patient: [REDACTED] | 52 y/o Female
+CC: Follow-up, obesity management / tirzepatide taper
+
+HPI:
+Pt is a 52 y/o female with hx of obesity presenting for scheduled f/u re:
+tirzepatide (Zepbound) therapy. She has been on tirzepatide for approximately
+22 months, most recently at 7.5mg SQ weekly (highest available dose). Current
+weight 173 lbs, down from ~220 lbs at start. States she is approximately 8 lbs
+from her personal goal weight. Has maintained weight training and walking
+throughout tx; recently added jogging 1-2x/week.
+
+Pt reports a constellation of GI side effects that have been ongoing and now
+significantly affecting QOL: constipation cycling, bloating, and gas at minimum
+once weekly despite aggressive dietary fiber intake and hydration strategies.
+Also endorses new-onset anhedonia over the past several months, which she
+attributes at least partially to the medication. Additionally reports noticeable
+hair thinning - estimates significant loss over treatment course, finds this
+distressing. Denies nausea or vomiting. No chest pain, no dyspnea.
+
+Pt has self-initiated a taper - split her last 7.5mg dose to 3.75mg and has
+approximately 3-4 doses remaining. Presents today to discuss whether to
+complete taper or stop now, and what to expect afterward. Not requesting
+restart at this time.
+
+PMH: Obesity (class II at baseline), dyslipidemia, iron deficiency (resolved)
+Medications: Tirzepatide 7.5mg SQ weekly (tapering), creatine monohydrate
+(OTC), multivitamin
+Allergies: NKDA
+
+Vitals: Wt 173 lbs | BMI 28.1 | BP 118/74 | HR 72 | SpO2 98%
+Objective: Well-appearing female, NAD. No thyromegaly. Diffuse hair thinning
+noted on exam, consistent with telogen effluvium pattern. Abdomen soft, NTND.
+
+Labs (09/28/2024): Ferritin 22 (low-nl), TSH 1.9, CBC WNL, CMP WNL.
+
+Assessment and Plan:
+Pt near goal weight after ~22 months of tirzepatide with multiple converging
+factors driving discontinuation: persistent GI side effects unresponsive to
+mitigation, anhedonia of unclear etiology, distressing hair loss, and formulary
+exclusion making continued access financially unsustainable. Patient has
+independently initiated a dose taper, which is clinically reasonable given
+duration of use.
+
+Endorsed completing taper at 3.75mg for remaining doses rather than abrupt
+stop. Counseled re: expected weight stabilization or modest regain
+post-discontinuation and importance of maintaining current exercise regimen.
+No new Rx today. RTC 3 months for weight check, metabolic panel, mood
+reassessment.
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile,allowframebreaks]{Example Note: Access / Cost / System Barriers}
+\tiny
+\textbf{Discontinuation cue:}
+\textcolor{red}{insurance has removed tirzepatide from formulary and the patient cannot sustain out-of-pocket cost, so discontinuation is driven by access barriers.}
+
+\vspace{0.5em}
+\begin{verbatim}
+OUTPATIENT VISIT NOTE
+Date of Service: 10/14/2024
+Provider: Whitfield, Dana A., MD
+Location: Internal Medicine - Weight Management Clinic
+Patient: [REDACTED] | 52 y/o Female
+CC: Follow-up, obesity management / tirzepatide taper
+
+HPI:
+Pt is a 52 y/o female with hx of obesity presenting for scheduled f/u re:
+tirzepatide (Zepbound) therapy. She has been on tirzepatide for approximately
+22 months, most recently at 7.5mg SQ weekly. Current weight 173 lbs, down from
+~220 lbs at start. States she is approximately 8 lbs from her personal goal
+weight.
+
+Separately, pt notes insurance has removed tirzepatide from formulary
+entirely. Her plan has also moved semaglutide (Wegovy) to Tier 3, making OOP
+cost comparable to full self-pay. States she cannot sustain either medication
+financially at current pricing and is not pursuing self-pay.
+
+Pt has self-initiated a taper - split her last 7.5mg dose to 3.75mg and has
+approximately 3-4 doses remaining. Presents today to discuss whether to
+complete taper or stop now, and what to expect afterward. Not requesting
+restart at this time.
+
+PMH: Obesity (class II at baseline), dyslipidemia
+Medications: Tirzepatide 7.5mg SQ weekly (tapering), multivitamin
+Allergies: NKDA
+Vitals: Wt 173 lbs | BMI 28.1 | BP 118/74 | HR 72
+
+Assessment and Plan:
+Pt near goal weight after ~22 months of tirzepatide. A major driver of
+discontinuation is formulary exclusion making continued access financially
+unsustainable. Patient has independently initiated a dose taper, which is
+clinically reasonable given duration of use.
+
+Plan is to complete taper at 3.75mg for remaining doses rather than abrupt
+stop. Reviewed expected weight stabilization or modest regain and discussed
+continuing exercise and nutrition habits after discontinuation. No new Rx
+today. RTC 3 months for follow-up.
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile,allowframebreaks]{Example Note: Patient Preference / Beliefs}
+\tiny
+\textbf{Discontinuation cue:}
+\textcolor{red}{the patient wants to stop based on online misinformation and personal beliefs, despite no physical adverse effects.}
+
+\vspace{0.5em}
+\begin{verbatim}
+DATE: 01/27/2025
+AUTHOR: MBEKI, FAITH N., NP
+TITLE: TELEPHONE ENCOUNTER - MEDICATION MANAGEMENT
+
+ACTIVE PROBLEMS: T2DM, anxiety (GAD), hypothyroidism, obesity,
+hyperlipidemia, migraines
+
+VITALS: Not obtained (telephone visit)
+
+SUBJECTIVE:
+Telephone encounter w/ 55 y/o female veteran. Pt calling with questions about
+her semaglutide (Ozempic) 0.5mg weekly (started 8 weeks ago). States she
+researched online and "read that Ozempic causes muscle loss." Concerned about
+sarcopenia. Also reports her sister told her the medication is "only for rich
+people and it's just hype." Pt states "I don't really feel any different on it
+and I'm not sure it's doing anything." Denies nausea, vomiting, diarrhea.
+Denies any physical side effects. Weight per home scale: unchanged from start.
+Pt asks if she can "just take a break" from it. When asked to elaborate,
+states she wants to stop for now and "maybe try again later." When probed about
+specific concerns, repeats the information from online and her sister's
+comments. Does not report cost issues. Does not report any physical symptoms.
+
+OBJECTIVE: N/A - telephone encounter.
+LABS: Most recent A1c 8.4% (11/2024 at initiation). No interval labs since.
+ACTIVE MEDS: Semaglutide 0.5mg SQ weekly (8 wks), levothyroxine 75mcg QAM,
+metformin 500mg BID, escitalopram 10mg QD, topiramate 50mg QD, atorvastatin
+20mg QHS.
+
+ASSESSMENT AND PLAN:
+1. T2DM / SEMAGLUTIDE - Pt requesting to stop semaglutide. No adverse effects
+reported. Pt's stated concerns appear based on online misinformation and social
+influence rather than clinical experience with the drug. Counseled pt at length
+re: evidence base for semaglutide and addressed muscle loss concern. Pt
+listened but maintains she wants to stop "for now." Her preference documented.
+
+- Semaglutide 0.5mg: per patient preference, will hold and not refill at this
+  time. Pt understands A1c may worsen. Advised to check BG more frequently.
+- Continue metformin 500mg BID.
+- Repeat A1c and BMP at 3-month follow-up visit.
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile,allowframebreaks]{Example Note: Planned / Goal-Based Discontinuation}
+\tiny
+\textbf{Discontinuation cue:}
+\textcolor{red}{the patient has nearly reached the target weight and is ending therapy intentionally as a planned, time-limited course.}
+
+\vspace{0.5em}
+\begin{verbatim}
+Ambulatory Care Visit - Weight Management Follow-up
+Date: 03/06/2025
+Clinician: Osei, Priscilla K., PA-C
+Clinic: Adult Primary Care / Metabolic Health
+
+34 y/o female here today for what appears to be her final scheduled visit in
+our weight management program. Pt initiated semaglutide (Wegovy)
+approximately 8 months ago, self-pay, with an explicitly stated short-term goal
+of returning to her pre-pregnancy weight. She was counseled at initiation that
+long-term use was not her plan and that she understood the medication as a
+time-limited tool to help reestablish healthy habits and reach a defined target.
+
+At today's visit she is within 5 lbs of her stated goal. Over the past several
+weeks she has been deliberately extending injection intervals - moved from every
+7 days to every 10 days, then to every 14 days for her most recent dose.
+Reports she has continued to lose weight during this period and is not
+experiencing rebound hunger or significant cravings. She attributes this to
+dietary changes she has sustained throughout - structured meals, reduced
+processed food intake, consistent physical activity. She does not report GI
+side effects or any other complaints related to the medication.
+
+Pt is self-pay and states the cost was always a planned, time-limited expense.
+She is not requesting a new supply and does not wish to continue. No distress
+about stopping. She seems well-prepared for the transition off medication.
+
+Wt: 138 lbs (starting wt documented as ~168 lbs). BMI 22.9. BP 112/70, HR 68.
+No new labs indicated at this visit.
+
+Plan:
+Pt has completed her intended course of therapy in a structured, intentional
+manner. Taper approach (interval extension rather than abrupt stop) is
+reasonable and she has tolerated it well. No clinical concerns at this time.
+Discussed weight maintenance strategies and that some modest regain is common
+post-discontinuation and does not represent failure.
+\end{verbatim}
+\end{frame}
+
+\section{Synthetic Dataset Examples}
+
+\begin{frame}[fragile,allowframebreaks]{Synthetic Example: Adverse Effects / Tolerability}
+\tiny
+\textbf{Discontinuation cue:}
+\textcolor{red}{severe nausea, early satiety, bloating, and intermittent vomiting are significantly impairing quality of life, so semaglutide is discontinued immediately.}
+
+\vspace{0.5em}
+\begin{verbatim}
+Source: Filtered synthetic note from Gemma-4-31B-it
+
+VA PRIMARY CARE CLINIC NOTE
+Date of Service: 11/12/2024
+Provider: Sterling, Marcus J, MD
+Location: Community Health Outpatient Clinic
+Patient: [REDACTED] | 58 y/o Male
+
+CC: Follow-up T2DM / GLP-1 tolerability
+
+HPI:
+Pt is a 58 y/o male with a hx of Type 2 Diabetes Mellitus, hypertension, and
+hyperlipidemia presenting for scheduled f/u. He has been on semaglutide
+(Ozempic) for approximately 6 months, currently at 0.5mg SQ weekly. HbA1c has
+improved from 8.4% to 7.2% since initiation.
+
+Pt reports significant and worsening GI distress over the last 4-6 weeks.
+Specifically describes severe nausea that is now present daily, often
+persisting for several hours after meals. He endorses an "unbearable" feeling
+of early satiety and bloating, noting he can barely finish a small portion of
+dinner without feeling ill. Reports intermittent vomiting (1-2x per week),
+though denies any hematemesis or fever. He notes these symptoms are
+significantly impacting his ability to work and his overall QOL.
+
+PMH: T2DM, HTN, HL, OSA
+Medications:
+- Semaglutide 0.5mg SQ weekly
+- Lisinopril 20mg PO daily
+- Atorvastatin 40mg PO daily
+- Metformin 1000mg PO BID
+
+Vitals: Wt 218 lbs | BMI 31.4 | BP 132/84 | HR 78 | SpO2 96% on RA
+
+Assessment and Plan:
+Semaglutide intolerance with severe nausea, early satiety, and intermittent
+vomiting despite dietary modifications. Symptoms are now severely impacting
+quality of life. Plan is to discontinue semaglutide immediately, continue
+Metformin, and monitor glycemic control closely after cessation.
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile,allowframebreaks]{Synthetic Example: Access / Cost / System Barriers}
+\tiny
+\textbf{Discontinuation cue:}
+\textcolor{red}{semaglutide became non-covered, the appeal was denied, and the out-of-pocket cost is unsustainable, forcing discontinuation.}
+
+\vspace{0.5em}
+\begin{verbatim}
+Source: Filtered synthetic note from Gemma-4-31B-it
+
+VA MEDICAL CENTER
+Department of Primary Care / Internal Medicine
+Progress Note
+
+Patient: [REDACTED]
+DOB: [REDACTED] (58M)
+Date of Visit: 11/12/2024
+Provider: Henderson, Marcus, MD
+
+Reason for Visit: Follow-up for Type 2 Diabetes Mellitus and medication review.
+
+S:
+Pt is a 58 y/o male with T2DM, hypertension, and hyperlipidemia. He reports
+that semaglutide (Ozempic) worked well over the last 14 months with good
+glycemic control and modest weight loss. However, his insurance provider has
+changed its formulary and semaglutide is now non-covered. Appeal was denied.
+
+Other GLP-1 agonists are similarly not covered. The out-of-pocket cost for a
+monthly supply is now approximately $900, which he states is completely
+unsustainable. He has been stretching his last few doses while trying to find a
+solution, but is now effectively out of medication.
+
+O:
+Wt 224 lbs (up 4 lbs from last visit). BMI 31.2. BP 132/84. HR 78.
+Recent Labs: HbA1c 6.8%, Fasting Glucose 122, Creatinine 1.1, LDL 82.
+
+A/P:
+Pt achieved excellent glycemic control on semaglutide but now faces abrupt loss
+of access due to insurance formulary exclusion. The financial barrier is
+absolute. Plan is to discontinue semaglutide, increase Metformin to 1000mg BID,
+and monitor closely for glycemic rebound after GLP-1 discontinuation.
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile,allowframebreaks]{Synthetic Example: Patient Preference / Beliefs}
+\tiny
+\textbf{Discontinuation cue:}
+\textcolor{red}{the patient wants to stop because he believes the medication is "artificial" and does not want to depend on it, despite clinical benefit.}
+
+\vspace{0.5em}
+\begin{verbatim}
+Source: Filtered synthetic note from Gemma-4-31B-it
+
+Veterans Affairs Medical Center
+Department of Internal Medicine
+Progress Note - Established Patient
+
+Patient: [REDACTED]
+DOB: [REDACTED] (62M)
+Date: 02/14/2025
+Provider: Sarah Jenkins, MD
+Visit Type: Follow-up, Type 2 Diabetes Management
+
+S:
+Patient is a 62-year-old male veteran presenting for routine DM follow-up. He
+has been on tirzepatide (Mounjaro) 5mg weekly for approximately 4 months. He
+reports a good initial response with a weight loss of 12 lbs and improved
+fasting blood glucose levels. However, he comes in today requesting to
+discontinue the medication.
+
+Patient explains that he has become increasingly concerned about the "artificial"
+nature of the medication. He states he read online that GLP-1s "trick the brain"
+and lead to loss of natural willpower over time. He says he does not want to
+become dependent on a chemical to make healthy choices. He denies any adverse
+physical side effects and understands that his blood sugars may worsen.
+
+O:
+Wt 218 lbs (down from 230 lbs). BP 138/86. HR 72.
+Labs: HbA1c 7.2% (down from 8.1%), Fasting Glucose 134.
+
+A/P:
+Patient requests discontinuation based on personal beliefs regarding dependence
+and the "artificial" nature of appetite suppression. Counseling provided
+regarding expected metabolic benefits and risks of stopping, but the patient
+remains firm in his decision. Plan is to discontinue tirzepatide and continue
+Metformin with close glucose monitoring.
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile,allowframebreaks]{Synthetic Example: Planned / Goal-Based Discontinuation}
+\tiny
+\textbf{Discontinuation cue:}
+\textcolor{red}{the patient reached the pre-defined weight goal, tapered successfully, and is now ready for full planned discontinuation.}
+
+\vspace{0.5em}
+\begin{verbatim}
+Source: Filtered synthetic note from Gemma-4-31B-it
+
+VA Medical Center - Metabolic Health / Endocrinology
+Date: 10/14/2024
+Clinician: Henderson, Marcus L., MD
+
+Patient: 52 y/o male with Type 2 Diabetes, Hypertension, and Obesity
+
+Reason for Visit: Planned therapy transition and weight management follow-up.
+
+HPI:
+Pt began tirzepatide (Zepbound) approximately 11 months ago with a clearly
+defined, short-term goal of reaching a specific weight target (about 200 lbs)
+to reduce joint pain and improve mobility. Long-term medication use was never
+his intended plan; the therapy was framed as a time-limited tool to facilitate
+weight loss and establish sustainable diet and exercise habits.
+
+At today's visit, Pt has reached his stated goal (Current Wt: 198 lbs). Over
+the last 6 weeks, he has been intentionally tapering by extending the injection
+interval from every 7 days to every 10, then 14, and most recently 21 days.
+During this period he has maintained his weight and denies rebound hunger or a
+return of obesity-related joint pain.
+
+Assessment/Plan:
+Pt has successfully reached his pre-defined weight goal in a structured and
+intentional manner. The taper approach via interval extension has been well
+tolerated, and he is now clinically ready for full discontinuation of
+tirzepatide. No further prescriptions will be issued. He will continue current
+diet and exercise habits and transition back to routine primary care follow-up.
+\end{verbatim}
+\end{frame}
+
+\end{document}

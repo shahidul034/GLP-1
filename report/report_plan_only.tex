@@ -1,0 +1,159 @@
+\documentclass[aspectratio=169]{beamer}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+\title{Project Plan: Synthetic Clinical Note Generation for GLP-1 RA Discontinuation Reason Classification}
+\author{Adiba, Shahidul \\ BioNLP Research Group}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}
+    \titlepage
+\end{frame}
+
+\begin{frame}{Plan Overview}
+    \tableofcontents
+\end{frame}
+
+\section{Motivation and Scope}
+
+\begin{frame}{Problem and Motivation}
+    \begin{itemize}
+        \item GLP-1 receptor agonists are widely used for diabetes and weight management, but discontinuation is common and clinically important.
+        \item Reasons for discontinuation are often buried in free-text clinical notes rather than structured fields.
+        \item Supervised NLP models need high-quality labeled data, but expert annotation of real clinical notes is expensive and difficult to scale.
+        \item This project focuses on synthetic note generation as a practical path toward building training data for discontinuation reason classification.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Project Objective}
+    \begin{itemize}
+        \item Build a publishable end-to-end pipeline for synthetic GLP-1 discontinuation note generation, validation, and benchmarking.
+        \item Create a diverse synthetic dataset in VA-style EHR format.
+        \item Validate note quality through embedding-based diversity checks, LLM review, and human review.
+        \item Benchmark the curated dataset on downstream classification tasks.
+        \item Document limitations, ethics considerations, and reproducibility practices expected for a dataset paper.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Taxonomy and Planned Scope}
+    \textbf{Initial label set}
+    \begin{itemize}
+        \item Adverse Effects / Tolerability
+        \item Access / Cost / System Barriers
+        \item Patient Preference / Beliefs
+        \item Planned / Goal-Based Discontinuation
+    \end{itemize}
+
+    \vspace{0.5em}
+    \textbf{Planned expansion areas}
+    \begin{itemize}
+        \item Main Label
+        \item Clinical Decision / Medical Appropriateness
+        \item Efficacy / Expectation Mismatch
+        \item Other / Unknown
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Research Questions and Planned Contributions}
+    \small
+    \textbf{Research questions}
+    \begin{itemize}
+        \item Can synthetic GLP-1 discontinuation notes achieve strong realism, diversity, and label fidelity?
+        \item How well do LLM-based judgments align with expert human review?
+        \item Does a curated synthetic dataset improve downstream classification across prompting and supervised settings?
+        \item Which curation steps matter most for downstream performance?
+    \end{itemize}
+
+    \textbf{Expected contributions}
+    \begin{itemize}
+        \item A clinically motivated synthetic dataset and benchmark
+        \item A validation pipeline that combines embeddings, LLM judges, and human judges
+        \item A multi-model benchmark for discontinuation reason classification
+        \item An empirical analysis of when synthetic data helps and where it fails
+    \end{itemize}
+\end{frame}
+
+\section{Methodology}
+
+\begin{frame}{Planned Synthetic Data Pipeline}
+    \begin{enumerate}
+        \item \textbf{Generation:} Use few-shot prompting to produce VA-style clinical notes for each discontinuation category.
+        \item \textbf{Diversity control:} Apply embedding-based similarity checks to reduce near-duplicate notes.
+        \item \textbf{Automated validation:} Use an LLM judge to score realism, alignment, coherence, variability, and GLP-1 relevance.
+        \item \textbf{Human validation:} Review a sampled subset with domain-informed annotation criteria.
+        \item \textbf{Curation:} Filter low-quality notes and build stable development and test partitions.
+    \end{enumerate}
+\end{frame}
+
+\begin{frame}{Planned Evaluation Strategy}
+    \begin{itemize}
+        \item Generate and curate a synthetic dataset covering the target discontinuation categories.
+        \item Report descriptive dataset characteristics such as class balance, note length patterns, lexical diversity, and embedding diversity.
+        \item Maintain a fixed held-out test set that remains untouched during development.
+        \item Measure agreement between automated judgments and human review.
+        \item Run ablations to test the impact of diversity filtering, quality filtering, and prompt design choices.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Planned Benchmarking Strategy}
+    \small
+    \textbf{Model families}
+    \begin{itemize}
+        \item Qwen family
+        \item Gemma family
+        \item Llama family
+        \item Clinical encoder baselines such as BioClinicalBERT or ClinicalBERT
+    \end{itemize}
+
+    \textbf{Evaluation settings}
+    \begin{itemize}
+        \item Zero-shot prompting
+        \item Few-shot prompting
+        \item Supervised fine-tuning
+        \item Preference-based optimization where appropriate
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Validation and Publication Requirements}
+    \small
+    \begin{itemize}
+        \item Define a human evaluation protocol with reviewer expertise, annotation rubric, and agreement analysis.
+        \item Include strong discriminative baselines in addition to generative LLMs.
+        \item Study the effect of diversity filtering, quality filtering, prompt design, and category granularity through ablations.
+        \item Compare automated review decisions with human review outcomes.
+        \item Seek external validation against real or expert-authored notes when feasible.
+        \item Prepare dataset documentation, ethics notes, bias analysis, and reproducibility details for release.
+    \end{itemize}
+\end{frame}
+
+\section{Roadmap}
+
+\begin{frame}{Next Steps}
+    \begin{itemize}
+        \item Run the full validation pipeline on the expanded synthetic corpus.
+        \item Apply diversity filtering, quality filtering, and structured error analysis.
+        \item Finalize stable train, development, and test splits.
+        \item Benchmark downstream classification across prompting and supervised settings.
+        \item Compare LLM-judge decisions with human review outcomes.
+        \item Expand beyond the initial label set using the broader discontinuation taxonomy.
+        \item Compare the resulting dataset against real-world EHR-style material for external validity.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Closing Plan Summary}
+    \begin{block}{Project direction}
+        The study will motivate the task, define a clinically grounded taxonomy, build a synthetic note generation and curation pipeline, validate the resulting data with automated and human review, and benchmark its value for downstream classification.
+    \end{block}
+
+    \vspace{0.5em}
+    \begin{itemize}
+        \item Focus on a clear and defensible dataset paper narrative
+        \item Emphasize validation, benchmarking, and reproducibility
+        \item Keep the presentation centered on planned work rather than interim results
+    \end{itemize}
+\end{frame}
+
+\end{document}

@@ -1,0 +1,54 @@
+{
+  "age_quartiles": {
+    "Q1": {
+      "accuracy": 0.9841,
+      "f1_macro": 0.9852,
+      "support": 63,
+      "f1_reliable": true
+    },
+    "Q2": {
+      "accuracy": 1.0,
+      "f1_macro": 1.0,
+      "support": 60,
+      "f1_reliable": true
+    },
+    "Q3": {
+      "accuracy": 0.9851,
+      "f1_macro": 0.8438,
+      "support": 67,
+      "f1_reliable": true
+    },
+    "Q4": {
+      "accuracy": 1.0,
+      "f1_macro": 0.7143,
+      "support": 30,
+      "f1_reliable": true
+    },
+    "Unknown": {
+      "accuracy": 0.94,
+      "f1_macro": 0.9045,
+      "support": 100,
+      "f1_reliable": true
+    }
+  },
+  "implied_sex": {
+    "Female": {
+      "accuracy": 1.0,
+      "f1_macro": 0.8571,
+      "support": 28,
+      "f1_reliable": true
+    },
+    "Male": {
+      "accuracy": 0.9891,
+      "f1_macro": 0.9882,
+      "support": 275,
+      "f1_reliable": true
+    },
+    "Unknown": {
+      "accuracy": 0.7059,
+      "f1_macro": 0.4444,
+      "support": 17,
+      "f1_reliable": true
+    }
+  }
+}

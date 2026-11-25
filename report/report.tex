@@ -1,0 +1,270 @@
+\documentclass[11pt, a4paper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{titlesec}
+
+\titleformat{\section}{\large\bfseries\uppercase}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+
+\title{\textbf{Synthetic Clinical Note Generation for GLP-1 Receptor Agonist Discontinuation Reason Classification}}
+\author{Adiba, Shahidul \\ BioNLP Research Group}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This report documents the generation, evaluation, and quality filtering of synthetic clinical notes for a classification task focused on identifying reasons for GLP-1 receptor agonist (GLP-1 RA) medication discontinuation from electronic health record (EHR) text. An initial exploratory phase generated 1,480 notes using four large language models---Gemma-4-31B-it, Qwen3.5-27B, Qwen3.6-27B, and GLM-4.7-Flash---across four discontinuation reason categories. An LLM-as-a-Judge framework scored each note on five quality dimensions. After applying strict quality thresholds, 565 notes (38.2\%) were retained. Gemma-4-31B-it produced the highest-quality output with an 88.5\% retention rate and a mean overall score of 4.97/5.0. Based on these results, a second large-scale generation run produced an additional 4,000 notes using Gemma-4-31B-it, bringing the total synthetic corpus to 5,480 notes. This report details the methodology, presents comparative results, and discusses implications for downstream NLP model training.
+\end{abstract}
+
+\section{Introduction}
+
+GLP-1 receptor agonists (e.g., semaglutide, tirzepatide, liraglutide, dulaglutide) are widely prescribed medications for type 2 diabetes management and weight control. Their clinical popularity has grown significantly, but patient discontinuation remains a critical phenomenon requiring systematic documentation and analysis. Understanding the rationale behind discontinuation---whether due to adverse effects, access barriers, patient preference, or achievement of treatment goals---is essential for improving clinical decision-making, patient management, and health policy.
+
+Extracting discontinuation reasons from free-text clinical notes is a challenging natural language processing (NLP) task. Real-world clinical documentation varies widely in structure, style, and level of detail, making supervised learning approaches dependent on large, high-quality annotated datasets. However, annotated clinical text is expensive and time-consuming to produce, particularly for specialized domains.
+
+This project addresses the data scarcity problem by generating synthetic clinical notes using large language models (LLMs), evaluating their quality through an LLM-as-a-Judge framework, and filtering to produce a curated dataset suitable for training discontinuation reason classifiers.
+
+\section{Methodology}
+
+\subsection{Discontinuation Reason Taxonomy}
+
+Four broad discontinuation reason categories were defined based on clinical interpretability and reduction of label sparsity:
+
+\begin{enumerate}
+    \item \textbf{Adverse Effects / Tolerability:} Discontinuation due to side effects, intolerance, or medically concerning physiological effects (e.g., GI symptoms, fatigue, pancreatitis concern).
+    \item \textbf{Access / Cost / System Barriers:} Discontinuation driven by external barriers to obtaining the medication (e.g., insurance issues, drug shortages, prior authorization burden).
+    \item \textbf{Patient Preference / Beliefs:} Discontinuation driven by patient choice, beliefs about long-term pharmacotherapy, or lifestyle considerations.
+    \item \textbf{Planned / Goal-Based Discontinuation:} Intentional discontinuation after reaching therapeutic goals or completing a planned treatment course.
+\end{enumerate}
+
+\subsection{Synthetic Data Generation Pipeline}
+
+The pipeline follows four stages:
+
+\begin{enumerate}
+    \item \textbf{Generation:} Few-shot LLM prompting to produce synthetic clinical notes in VA-style EHR format.
+    \item \textbf{Judgment:} LLM-as-a-Judge evaluation scoring each note on five quality dimensions.
+    \item \textbf{Filtering:} Threshold-based quality filtering to retain only high-scoring notes.
+    \item \textbf{Diversity Filtering:} Embedding-based deduplication using Qwen3-Embedding-8B with cosine similarity thresholding.
+\end{enumerate}
+
+\subsection{Generation Configuration}
+
+Each generating model produced notes using batched vLLM inference with the following parameters: temperature = 0.9, top-p = 0.95, maximum output tokens = 4,192, maximum model length = 8,192, and random seed = 42. Few-shot seed examples were provided per category to guide style and content. In the initial exploratory run, each model generated 100 notes per category, except Qwen3.6-27B, which generated varying counts due to operational constraints. Following the evaluation, Gemma-4-31B-it was selected for a scale-up run (v2), generating 1,000 notes per category across all four categories using identical hyperparameters.
+
+\subsection{Scale-Up Data Generation Run (v2)}
+
+Based on the strong performance of Gemma-4-31B-it in the exploratory evaluation---with a 4.97/5.0 mean judge score and 88.5\% filter retention---a second generation run was executed to produce a substantially larger corpus. The v2 run generated 1,000 notes per category (4,000 total), a 25\texttimes{} increase from the initial Gemma run of 400 notes.
+
+\begin{table}[H]
+\centering
+\caption{Gemma-4-31B-it v2 Generation Statistics per Category}
+\label{tab:v2_stats}
+\begin{tabular}{lrr}
+\toprule
+\textbf{Category} & \textbf{Notes Generated} & \textbf{Elapsed Time (s)} \\
+\midrule
+Adverse Effects / Tolerability & 1,000 & 1,321.5 \\
+Access / Cost / System Barriers & 1,000 & 1,217.0 \\
+Patient Preference / Beliefs & 1,000 & 1,363.9 \\
+Planned / Goal-Based Discontinuation & 1,000 & 1,002.6 \\
+\midrule
+\textbf{Total} & \textbf{4,000} & \textbf{4,905.0} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The v2 generation used identical prompt templates, temperature, and batch size (25) as the v1 run. The total generation time was approximately 82 minutes. The 4,000 v2 notes have been combined with the 400 v1 Gemma notes, forming a pool of 4,400 Gemma-generated notes available for judge evaluation, quality filtering, diversity deduplication, and subsequent downstream classifier training.
+
+\begin{table}[H]
+\centering
+\caption{Models Used for Synthetic Note Generation}
+\label{tab:generation_stats}
+\begin{tabular}{llll}
+\toprule
+\textbf{Model} & \textbf{Run} & \textbf{Notes/Category} & \textbf{Total Notes} \\
+\midrule
+Gemma-4-31B-it & v1 (exploratory) & 100 & 400 \\
+Qwen3.5-27B & v1 (exploratory) & 100 & 400 \\
+Qwen3.6-27B & v1 (exploratory) & 81\,--\,100 & 280 \\
+GLM-4.7-Flash & v1 (exploratory) & 100 & 400 \\
+\midrule
+\multicolumn{3}{l}{\textbf{Subtotal (exploratory)}} & \textbf{1,480} \\
+\midrule
+Gemma-4-31B-it & v2 (scale-up) & 1,000 & 4,000 \\
+\midrule
+\textbf{Grand Total} & & & \textbf{5,480} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The prompt template instructs the model to generate VA-style clinical notes encompassing HPI, assessment and plan, vitals, labs, medication lists, and other realistic EHR content. Controlled variation is emphasized to prevent template-like homogeneity.
+
+\subsection{LLM-as-a-Judge Evaluation}
+
+All generated notes were evaluated by Gemma-4-31B-it acting as a judge model. Each note received scores on a 1--5 Likert scale across five dimensions:
+
+\begin{itemize}
+    \item \textbf{Clinical Realism:} Resemblance to authentic clinical documentation
+    \item \textbf{Category Alignment:} Correctness of the intended discontinuation reason category
+    \item \textbf{Clinical Coherence:} Internal medical logic and consistency
+    \item \textbf{Note Variability:} Stylistic and structural diversity
+    \item \textbf{GLP-1 Relevance:} Appropriateness and accuracy of GLP-1 medication content
+\end{itemize}
+
+An overall binary accept/reject decision was also recorded for each note.
+
+\subsection{Quality Filtering}
+
+The filter applied the following strict thresholds:
+
+\begin{itemize}
+    \item Minimum score of 5 per dimension
+    \item Minimum average score \textbar{} 3.0 across all dimensions
+    \item Accept-only mode (notes with explicit reject decisions are excluded)
+\end{itemize}
+
+\section{Results}
+
+\subsection{Overall Judge Scores by Model}
+
+\begin{table}[H]
+\centering
+\caption{Global Mean Judge Scores by Generation Model}
+\label{tab:judge_scores}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Model} & \textbf{Realism} & \textbf{Alignment} & \textbf{Coherence} & \textbf{Variability} & \textbf{Relevance} \\
+\midrule
+Gemma-4-31B-it & 4.98 & 5.00 & 5.00 & 4.89 & 5.00 \\
+Qwen3.5-27B & 5.00 & 5.00 & 5.00 & 4.40 & 5.00 \\
+GLM-4.7-Flash & 3.82 & 4.32 & 4.01 & 3.61 & 4.32 \\
+Qwen3.6-27B & 1.16 & 1.16 & 1.16 & 1.15 & 1.16 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Overall Mean Scores and Accept Rates}
+\label{tab:overall_scores}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Model} & \textbf{Total} & \textbf{Accept Rate} & \textbf{Mean Overall} & \textbf{Kept after Filter} & \textbf{Keep Rate} \\
+\midrule
+Gemma-4-31B-it & 400 & 100.0\% & 4.97 & 354 & 88.5\% \\
+Qwen3.5-27B & 400 & 100.0\% & 4.88 & 159 & 39.8\% \\
+GLM-4.7-Flash & 400 & 82.5\% & 4.01 & 42 & 10.5\% \\
+Qwen3.6-27B & 280 & 3.9\% & 1.16 & 10 & 3.6\% \\
+\midrule
+\textbf{Total} & \textbf{1,480} & \textbf{---} & \textbf{---} & \textbf{565} & \textbf{38.2\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Results show substantial variance in synthetic note quality across models. Gemma-4-31B-it generated near-perfect notes across all dimensions, with a global mean score of 4.97 and 88.5\% of notes surviving the strict quality filter. Qwen3.5-27B achieved perfect scores in clinical realism, alignment, coherence, and GLP-1 relevance, but lower note variability (4.40), resulting in a 39.8\% retention rate. GLM-4.7-Flash performed considerably lower, with the note variability and clinical realism dimensions being the primary failure points. Qwen3.6-27B produced the lowest quality output, with scores near the minimum across all dimensions---only 10 of 280 notes (3.6\%) were retained.
+
+\subsection{Per-Category Retention by Model}
+
+\begin{table}[H]
+\centering
+\caption{Notes Retained per Category by Model after Quality Filtering}
+\label{tab:per_category_retain}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccc}
+\toprule
+ & \textbf{Gemma-4-31B-it} & \textbf{Qwen3.5-27B} & \textbf{GLM-4.7-Flash} & \textbf{Qwen3.6-27B} \\
+\midrule
+Adverse Effects & 100 & 28 & 4 & 0 \\
+Access / Cost & 100 & 22 & 11 & 0 \\
+Patient Preference & 100 & 96 & 27 & 1 \\
+Goal-Based & 54 & 13 & 0 & 9 \\
+\midrule
+\textbf{Row Total} & \textbf{354} & \textbf{159} & \textbf{42} & \textbf{10} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The \textit{Patient Preference / Beliefs} category yielded the highest retention for Qwen3.5-27B (96 of 100, or 96\%) and GLM-4.7-Flash (27 of 100, or 27\%). In contrast, the \textit{Adverse Effects} category was the most challenging for GLM-4.7-Flash (4 of 100 retained) and Qwen3.6-27B (0 of 81 retained).
+
+\subsection{Primary Failure Modes}
+
+The reject reason counts from the quality filter reveal systematic failure patterns:
+
+\begin{itemize}
+    \item \textbf{Note Variability:} The most common rejection reason across models. GLM-4.7-Flash scored 70 notes as 1 on variability. Qwen3.5-27B had 241 notes scoring 4 on variability.
+    \item \textbf{Clinical Realism:} GLM-4.7-Flash (265 rejections) and Qwen3.6-27B (269 rejections) produced notes lacking authentic clinical style.
+    \item \textbf{Category Alignment:} Qwen3.6-27B scored 1 on alignment for 269 of 280 notes, suggesting the model failed to follow the category-specific prompt instructions.
+\end{itemize}
+
+\subsection{Judge Score Distributions}
+
+\paragraph{Gemma-4-31B-it}
+All 400 notes achieved perfect scores of 5 on category alignment, clinical coherence, and GLP-1 relevance. On clinical realism, 392 of 400 notes scored 5 and 8 scored 4. For note variability, 354 scored 5 and 46 scored 4.
+
+\paragraph{Qwen3.5-27B}
+All 400 notes scored 5 on clinical realism, category alignment, clinical coherence, and GLP-1 relevance. Note variability was the sole differentiating factor, with 159 scoring 5 and 241 scoring 4.
+
+\paragraph{GLM-4.7-Flash}
+This model exhibited broader score dispersion. Sixty-eight out of 400 notes received the lowest score (1) across all five dimensions. Clinical coherence distribution: 222 at 5, 96 at 4, 12 at 3, 2 at 2, and 68 at 1.
+
+\paragraph{Qwen3.6-27B}
+This model performed uniformly poorly. Of 280 notes, 269 received a score of 1 across all five dimensions. Only 11 notes received a score of 5, and 1 note scored 4 on note variability. Overall accept rate was 3.9\%.
+
+\section{Discussion}
+
+\subsection{Model Performance Comparison}
+
+The results demonstrate a clear hierarchy in synthetic clinical note generation quality. Gemma-4-31B-it emerged as the strongest performer with near-perfect judge scores and high retention rates across all categories. This model's output was highly realistic, well-aligned with target categories, and clinically coherent. The only dimension on which it showed any deficiency was note variability, where 46 of 400 notes received a score of 4 rather than 5---primarily in the Planned/Goal-Based Discontinuation category.
+
+Qwen3.5-27B produced notes that the judge rated as fully realistic and clinically coherent but identified as insufficiently variable. This suggests the model may have converged on a limited set of stylistic patterns during generation. The model performed best on the Patient Preference category (96\% retention) and worst on Planned Goal-Based Discontinuation (13\% retention).
+
+GLM-4.7-Flash demonstrated the widest quality distribution. The fact that 68 notes received the minimum score of 1 on all dimensions, while others scored highly, suggests inconsistent attention to prompt instructions, potentially due to tokenizer or chat template mismatches.
+
+Qwen3.6-27B produced uniformly low-quality output that the judge model rejected at a 96.1\% rate. The near-total failure across all dimensions is consistent with the model failing to properly parse or follow the generation prompt format, rather than a capability limitation per se.
+
+\subsection{Implications for Dataset Construction}
+
+The 565 high-quality notes retained across all models provide a solid foundation for training a GLP-1 discontinuation reason classifier. The strong category alignment scores (5.0 for Gemma and Qwen3.5) indicate that the generated notes faithfully represent their intended labels, reducing label noise in downstream training.
+
+\subsection{Limitations}
+
+\begin{itemize}
+    \item Synthetic notes, despite high judge scores, may not fully capture the messiness, abbreviations, and inconsistency of real EHR documentation.
+    \item The LLM-as-a-Judge evaluation relies on a single judge model (Gemma-4-31B-it), which may introduce systematic bias.
+    \item The taxonomy of four categories is intentionally broad. Real-world clinical notes may contain complex, multi-factorial discontinuation reasons that resist clean categorization.
+    \item The Qwen3.6-27B generation results are not representative of the model's true capability, as they likely reflect an implementation issue rather than inherent quality.
+\end{itemize}
+
+\subsection{Future Work}
+
+\begin{itemize}
+    \item Execute the LLM-as-a-Judge evaluation on the v2 corpus of 4,000 Gemma-4-31B-it notes, followed by quality filtering and diversity deduplication.
+    \item Combine the filtered v1 and v2 Gemma datasets with the filtered Qwen3.5-27B and GLM-4.7-Flash datasets to produce the final training corpus.
+    \item Conduct human expert review on a stratified subset of filtered notes to validate judge scores.
+    \item Fine-tune a BioClinicalBERT or similar biomedical language model on the curated dataset for downstream classification.
+    \item Expand to real-world EHR data from MIMIC-IV or VA clinical repositories for validation.
+    \item Investigate multi-model semantic agreement measures to assess note quality independently of the judge model.
+\end{itemize}
+
+\section{Conclusion}
+
+We generated 5,480 synthetic clinical notes across four GLP-1 discontinuation reason categories using five generation runs. An initial exploratory phase with four models (Gemma-4-31B-it, Qwen3.5-27B, Qwen3.6-27B, GLM-4.7-Flash) produced 1,480 notes of which 565 (38.2\\%) survived strict quality filtering. Gemma-4-31B-it produced the highest-quality output (88.5\\% retention, 4.97/5.0 mean score), prompting a scale-up run that generated an additional 4,000 notes. The combined corpus of 4,400 Gemma-generated notes (v1 + v2) forms the primary dataset for downstream classifier training, with an additional 159 filtered Qwen3.5-27B and 42 filtered GLM-4.7-Flash notes available for augmenting diversity. The curated synthetic data provides annotated training material for GLP-1 discontinuation reason classification, a task with clinical relevance for medication adherence monitoring and patient care management.
+
+\bibliographystyle{plain}
+\begin{thebibliography}{9}
+\bibitem{avijit2024} Using large language models to assess public perceptions around glucagon-like peptide-1 receptor agonists on social media. \textit{Communications Medicine}, 2024. doi:10.1038/s43856-024-00566-z.
+\end{thebibliography}
+
+\end{document}

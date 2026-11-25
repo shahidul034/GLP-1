@@ -1,0 +1,140 @@
+# Step-by-Step Guide: Evaluating Fidelity for Synthetic GLP-1 Discontinuation Notes
+
+This guide provides a detailed, actionable process to evaluate the **Fidelity** (realism and diversity) of your synthetic GLP-1 dataset (`train.jsonl`, `test.jsonl`) against real-world clinical benchmarks, specifically utilizing your access to generic MIMIC notes.
+
+---
+
+## Step 1: LLM-as-a-Judge vs. Human-as-a-Judge (Category Alignment & Realism)
+
+As outlined in your `report.tex`, you filtered notes using Gemma-4-31B-it across 5 dimensions. To prove this filtering was robust, you must demonstrate that human experts agree with the LLM's assessment.
+
+### 1.1 Extract the Held-out Test Set
+- Load your 200-note held-out `test.jsonl`. 
+- Have 2-3 clinical experts (or yourself and colleagues) review these 200 notes completely blind to the LLM's scores.
+- Score them on the exact same 1-5 scale used by your LLM-as-a-Judge (Realism, Category Alignment, Coherence, Variability, GLP-1 Relevance).
+
+### 1.2 Calculate Agreement (Krippendorff's Alpha)
+- You need to prove the LLM-as-a-judge is reliable. Compare the LLM's accept/reject decisions and 1-5 scores against the human scores on the 200 `test.jsonl` notes.
+- Use Python's `nltk.agreement` or the `simpleagree` package to calculate **Krippendorff’s Alpha** or **Cohen's Kappa**.
+- **Success Criteria:** An Alpha > 0.6 indicates moderate agreement, > 0.8 indicates strong agreement. Publishing this statistic proves your dataset is high-quality and your automated generation/filtering pipeline is trustworthy.
+
+---
+
+## Step 2: Stylistic Fidelity via BERTScore (vs. MIMIC)
+
+Even though your MIMIC notes might not mention GLP-1 drugs, they represent the "gold standard" for how clinicians write. You will compare the semantic style of your synthetic notes to real MIMIC outpatient notes.
+
+### 2.1 Prepare the Datasets
+- **Synthetic Data**: Load `train.jsonl`. Extract the text field (the actual clinical note).
+- **MIMIC Data**: Query your MIMIC database for a random sample of 1,000 to 4,000 outpatient or discharge summaries. Extract the text.
+
+### 2.2 Compute BERTScore
+Use the `evaluate` package from HuggingFace to calculate the BERTScore. You must use a **clinically-tuned BERT model** to ensure the embeddings understand medical terminology, rather than general English.
+
+```python
+from evaluate import load
+import json
+
+# 1. Load your synthetic notes
+synthetic_notes = []
+with open("train.jsonl", "r") as f:
+    for line in f:
+        synthetic_notes.append(json.loads(line)["text"])
+
+# 2. Load your MIMIC notes (assuming you saved them to a list)
+# mimic_notes = [...] 
+
+# 3. Initialize BERTScore with ClinicalBERT
+bertscore = load("bertscore")
+
+# 4. Calculate score
+# Note: BERTScore requires pairs. You can randomly pair your synthetic notes 
+# with your MIMIC notes to calculate the average stylistic similarity.
+results = bertscore.compute(
+    predictions=synthetic_notes[:1000], 
+    references=mimic_notes[:1000], 
+    model_type="emilyalsentzer/Bio_ClinicalBERT"
+)
+
+print(f"Average BERTScore F1: {sum(results['f1']) / len(results['f1'])}")
+```
+- **Success Criteria**: Report the average F1 score in your paper. A higher score means your synthetic notes share semantic and stylistic similarities with real physician documentation.
+
+---
+
+## Step 3: Lexical Diversity (Mode Collapse Check)
+
+Reviewers will want to know if your Gemma-4-31B-it model just hallucinated the exact same phrases repeatedly across the 4,400 notes (a phenomenon known as Mode Collapse). 
+
+### 3.1 Calculate Type-Token Ratio (TTR)
+TTR measures vocabulary richness (Unique Words / Total Words).
+- Compute the TTR for `train.jsonl`.
+- Compute the TTR for your sample of MIMIC notes.
+- **Goal**: Your synthetic TTR should be close to (but usually slightly lower than) the real MIMIC TTR.
+
+### 3.2 Calculate Unique N-Gram Ratio
+Measure how many unique 3-grams (phrases of 3 words) exist in your synthetic dataset vs. the MIMIC dataset.
+
+```python
+from nltk.util import ngrams
+from collections import Counter
+
+def unique_ngram_ratio(texts, n=3):
+    all_ngrams = []
+    for text in texts:
+        tokens = text.lower().split()
+        all_ngrams.extend(list(ngrams(tokens, n)))
+    
+    unique_count = len(set(all_ngrams))
+    total_count = len(all_ngrams)
+    return unique_count / total_count if total_count > 0 else 0
+
+synthetic_ratio = unique_ngram_ratio(synthetic_notes)
+mimic_ratio = unique_ngram_ratio(mimic_notes)
+
+print(f"Synthetic Unique 3-gram Ratio: {synthetic_ratio}")
+print(f"MIMIC Unique 3-gram Ratio: {mimic_ratio}")
+```
+- **Success Criteria**: If your synthetic ratio is within 10-15% of the MIMIC ratio, you can confidently state in your paper that the Gemma model generated highly diverse text and avoided mode collapse.
+
+---
+
+## Step 4: Clinical Concept Density (Entity Extraction)
+
+Real clinical notes are dense with medical concepts (symptoms, drugs, diseases). Synthetic notes generated by LLMs are often too "fluffy" and conversational. Reviewers will check if your notes contain realistic medical density.
+
+### 4.1 Extract Medical Entities using scispaCy
+Run a Named Entity Recognition (NER) tool over `train.jsonl` and your MIMIC notes.
+
+```python
+import spacy
+# Install scispacy and a clinical model first via terminal:
+# pip install scispacy
+# pip install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.1/en_core_sci_md-0.5.1.tar.gz
+
+nlp = spacy.load("en_core_sci_md")
+
+def get_concept_density(texts):
+    densities = []
+    for text in texts:
+        doc = nlp(text)
+        # Calculate ratio of medical entities to total words in the note
+        density = len(doc.ents) / len(doc)
+        densities.append(density)
+    return sum(densities) / len(densities)
+
+print(f"Synthetic Concept Density: {get_concept_density(synthetic_notes)}")
+print(f"MIMIC Concept Density: {get_concept_density(mimic_notes)}")
+```
+
+### 4.2 Analyze the Results
+If the concept densities are similar, you have strong empirical proof that your synthetic notes possess the same clinical depth and terminology usage as real physician notes.
+
+---
+
+## Conclusion: Paper Deliverables
+By running these 4 steps on your `train.jsonl`/`test.jsonl` and MIMIC data, your "Fidelity & Diversity" section in your paper will robustly report:
+1. **Cohen's Kappa / Krippendorff's Alpha**: Proving human and LLM judges agree on GLP-1 category alignment.
+2. **ClinicalBERT BERTScore**: Proving the overall text style strongly aligns with real MIMIC outpatient notes.
+3. **Type-Token & Unique N-Gram Ratios**: Proving the Gemma scale-up run generated a highly diverse corpus without mode collapse.
+4. **Concept Density Check**: Proving the notes contain realistic amounts of medical terminology.
